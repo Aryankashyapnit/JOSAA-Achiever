@@ -3,13 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: College Achiever - JOSAA Counselling API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: colleges
+    description: College data operations
+  - name: cutoffs
+    description: Cutoff data operations
+  - name: predictor
+    description: College predictor operations
+  - name: counselling
+    description: Mock counselling simulator operations
+  - name: dashboard
+    description: Dashboard summary operations
+
 paths:
   /healthz:
     get:
@@ -24,6 +37,357 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already in use
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+
+  /colleges:
+    get:
+      operationId: listColleges
+      tags: [colleges]
+      summary: List all JOSAA colleges
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [IIT, NIT, IIIT, GFTI]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of colleges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollegeListResponse"
+
+  /colleges/top:
+    get:
+      operationId: getTopColleges
+      tags: [colleges]
+      summary: Get top ranked colleges
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [IIT, NIT, IIIT, GFTI]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Top colleges list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/College"
+
+  /colleges/{id}:
+    get:
+      operationId: getCollege
+      tags: [colleges]
+      summary: Get college details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: College details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollegeDetail"
+        "404":
+          description: College not found
+
+  /cutoffs:
+    get:
+      operationId: listCutoffs
+      tags: [cutoffs]
+      summary: List cutoff data with filters
+      parameters:
+        - name: collegeId
+          in: query
+          schema:
+            type: integer
+        - name: branch
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [OPEN, OBC-NCL, SC, ST, EWS, OPEN-PwD, OBC-NCL-PwD, SC-PwD, ST-PwD, EWS-PwD]
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: round
+          in: query
+          schema:
+            type: integer
+        - name: gender
+          in: query
+          schema:
+            type: string
+            enum: [Gender-Neutral, Female-only]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Cutoff data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CutoffListResponse"
+
+  /cutoffs/trends:
+    get:
+      operationId: getCutoffTrends
+      tags: [cutoffs]
+      summary: Get historical cutoff trends for a branch/category
+      parameters:
+        - name: collegeId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: branch
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: gender
+          in: query
+          schema:
+            type: string
+            default: Gender-Neutral
+      responses:
+        "200":
+          description: Cutoff trend data across years
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CutoffTrend"
+
+  /predictor/results:
+    get:
+      operationId: getPredictorResults
+      tags: [predictor]
+      summary: Get college predictions based on JEE rank
+      parameters:
+        - name: rank
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: gender
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: year
+          in: query
+          schema:
+            type: integer
+            default: 2024
+      responses:
+        "200":
+          description: Prediction results grouped by likelihood
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PredictorResponse"
+
+  /counselling/rounds:
+    get:
+      operationId: listCounsellingRounds
+      tags: [counselling]
+      summary: List all JOSAA counselling rounds
+      responses:
+        "200":
+          description: Counselling rounds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CounsellingRound"
+
+  /counselling/seat-matrix:
+    get:
+      operationId: getSeatMatrix
+      tags: [counselling]
+      summary: Get seat matrix for a college and category
+      parameters:
+        - name: collegeId
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: year
+          in: query
+          schema:
+            type: integer
+            default: 2024
+      responses:
+        "200":
+          description: Seat matrix data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SeatMatrix"
+
+  /counselling/simulate:
+    post:
+      operationId: simulateCounselling
+      tags: [counselling]
+      summary: Simulate counselling with a preference list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulationInput"
+      responses:
+        "200":
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResult"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +398,336 @@ components:
       required:
         - status
 
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    SignupInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        jeeRank:
+          type: ["integer", "null"]
+        category:
+          type: ["string", "null"]
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, name, email, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        jeeRank:
+          type: ["integer", "null"]
+        category:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    College:
+      type: object
+      required: [id, name, shortName, type, state, city, nirf]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        nirf:
+          type: ["integer", "null"]
+        established:
+          type: ["integer", "null"]
+        totalSeats:
+          type: ["integer", "null"]
+        website:
+          type: ["string", "null"]
+
+    CollegeDetail:
+      type: object
+      required: [id, name, shortName, type, state, city, nirf, branches]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        nirf:
+          type: ["integer", "null"]
+        established:
+          type: ["integer", "null"]
+        totalSeats:
+          type: ["integer", "null"]
+        website:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        branches:
+          type: array
+          items:
+            type: string
+
+    CollegeListResponse:
+      type: object
+      required: [colleges, total, page, limit]
+      properties:
+        colleges:
+          type: array
+          items:
+            $ref: "#/components/schemas/College"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Cutoff:
+      type: object
+      required: [id, collegeId, collegeName, branch, category, gender, year, round, openingRank, closingRank]
+      properties:
+        id:
+          type: integer
+        collegeId:
+          type: integer
+        collegeName:
+          type: string
+        branch:
+          type: string
+        category:
+          type: string
+        gender:
+          type: string
+        year:
+          type: integer
+        round:
+          type: integer
+        openingRank:
+          type: integer
+        closingRank:
+          type: integer
+
+    CutoffListResponse:
+      type: object
+      required: [cutoffs, total, page, limit]
+      properties:
+        cutoffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Cutoff"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    CutoffTrend:
+      type: object
+      required: [year, round, openingRank, closingRank]
+      properties:
+        year:
+          type: integer
+        round:
+          type: integer
+        openingRank:
+          type: integer
+        closingRank:
+          type: integer
+
+    PredictorResult:
+      type: object
+      required: [college, branch, category, gender, closingRank, likelihood]
+      properties:
+        college:
+          $ref: "#/components/schemas/College"
+        branch:
+          type: string
+        category:
+          type: string
+        gender:
+          type: string
+        closingRank:
+          type: integer
+        likelihood:
+          type: string
+          enum: [safe, moderate, ambitious]
+        rankDifference:
+          type: integer
+
+    PredictorResponse:
+      type: object
+      required: [rank, category, gender, safe, moderate, ambitious]
+      properties:
+        rank:
+          type: integer
+        category:
+          type: string
+        gender:
+          type: string
+        safe:
+          type: array
+          items:
+            $ref: "#/components/schemas/PredictorResult"
+        moderate:
+          type: array
+          items:
+            $ref: "#/components/schemas/PredictorResult"
+        ambitious:
+          type: array
+          items:
+            $ref: "#/components/schemas/PredictorResult"
+
+    CounsellingRound:
+      type: object
+      required: [id, roundNumber, year, startDate, endDate, status]
+      properties:
+        id:
+          type: integer
+        roundNumber:
+          type: integer
+        year:
+          type: integer
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [upcoming, active, completed]
+
+    SeatMatrix:
+      type: object
+      required: [id, collegeId, branch, category, gender, totalSeats, year]
+      properties:
+        id:
+          type: integer
+        collegeId:
+          type: integer
+        branch:
+          type: string
+        category:
+          type: string
+        gender:
+          type: string
+        totalSeats:
+          type: integer
+        year:
+          type: integer
+
+    PreferenceItem:
+      type: object
+      required: [collegeId, branch, category, gender]
+      properties:
+        collegeId:
+          type: integer
+        branch:
+          type: string
+        category:
+          type: string
+        gender:
+          type: string
+
+    SimulationInput:
+      type: object
+      required: [rank, category, gender, preferences]
+      properties:
+        rank:
+          type: integer
+        category:
+          type: string
+        gender:
+          type: string
+        year:
+          type: integer
+        preferences:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreferenceItem"
+
+    SimulationResult:
+      type: object
+      required: [rank, category, allottedCollege, allottedBranch, round, message]
+      properties:
+        rank:
+          type: integer
+        category:
+          type: string
+        allottedCollege:
+          type: ["string", "null"]
+        allottedBranch:
+          type: ["string", "null"]
+        round:
+          type: ["integer", "null"]
+        message:
+          type: string
+        checkedPreferences:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalColleges, totalBranches, totalCutoffRecords, availableYears, iitCount, nitCount, iiitCount, gftiCount]
+      properties:
+        totalColleges:
+          type: integer
+        totalBranches:
+          type: integer
+        totalCutoffRecords:
+          type: integer
+        availableYears:
+          type: array
+          items:
+            type: integer
+        iitCount:
+          type: integer
+        nitCount:
+          type: integer
+        iiitCount:
+          type: integer
+        gftiCount:
+          type: integer
