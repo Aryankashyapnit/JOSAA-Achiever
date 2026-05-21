@@ -163,9 +163,9 @@ export default function Predictor() {
       rank: undefined,
       category: "OPEN",
       gender: "Gender-Neutral",
-      homeState: "",
-      preferredBranch: "",
-      type: "",
+      homeState: "__any__",
+      preferredBranch: "__any__",
+      type: "__any__",
     },
   });
 
@@ -174,7 +174,7 @@ export default function Predictor() {
         rank: queryParams.rank,
         category: queryParams.category,
         gender: queryParams.gender,
-        ...(queryParams.type && queryParams.type !== "ALL" ? { type: queryParams.type } : {}),
+        ...(queryParams.type && queryParams.type !== "__any__" ? { type: queryParams.type } : {}),
         year: 2024,
       }
     : undefined;
@@ -197,7 +197,7 @@ export default function Predictor() {
 
   // Client-side branch filter
   const filterByBranch = (list: any[]) => {
-    if (!queryParams?.preferredBranch) return list;
+    if (!queryParams?.preferredBranch || queryParams.preferredBranch === "__any__") return list;
     const pref = queryParams.preferredBranch.toLowerCase();
     const filtered = list.filter((r) => r.branch.toLowerCase().includes(pref));
     return filtered.length > 0 ? filtered : list;
@@ -317,14 +317,14 @@ export default function Predictor() {
                           <MapPin className="w-3.5 h-3.5 text-indigo-500" />
                           Home State
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? "__any__"}>
                           <FormControl>
                             <SelectTrigger className="border-slate-200" data-testid="select-home-state">
                               <SelectValue placeholder="Select your state" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="max-h-52">
-                            <SelectItem value="">Any State</SelectItem>
+                            <SelectItem value="__any__">Any State</SelectItem>
                             {INDIAN_STATES.map((s) => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
                             ))}
@@ -345,14 +345,14 @@ export default function Predictor() {
                           <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
                           Preferred Branch
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? "__any__"}>
                           <FormControl>
                             <SelectTrigger className="border-slate-200" data-testid="select-branch">
                               <SelectValue placeholder="Any branch" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="max-h-52">
-                            <SelectItem value="">Any Branch</SelectItem>
+                            <SelectItem value="__any__">Any Branch</SelectItem>
                             {BRANCHES.map((b) => (
                               <SelectItem key={b} value={b}>{b}</SelectItem>
                             ))}
@@ -370,14 +370,14 @@ export default function Predictor() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-slate-700 font-medium text-sm">College Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value ?? ""}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? "__any__"}>
                           <FormControl>
                             <SelectTrigger className="border-slate-200" data-testid="select-type">
                               <SelectValue placeholder="All Types" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">All Types</SelectItem>
+                            <SelectItem value="__any__">All Types</SelectItem>
                             <SelectItem value="IIT">IITs</SelectItem>
                             <SelectItem value="NIT">NITs</SelectItem>
                             <SelectItem value="IIIT">IIITs</SelectItem>
