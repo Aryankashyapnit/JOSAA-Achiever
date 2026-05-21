@@ -13,13 +13,17 @@ import Predictor from "@/pages/Predictor";
 import Cutoffs from "@/pages/Cutoffs";
 import Simulator from "@/pages/Simulator";
 import Colleges from "@/pages/Colleges";
+import CollegeDetail from "@/pages/CollegeDetail";
 import About from "@/pages/About";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
       refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
@@ -36,7 +40,15 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      
+
+      {/* Public legal pages — wrapped in layout but not protected */}
+      <Route path="/privacy">
+        <Layout><PrivacyPolicy /></Layout>
+      </Route>
+      <Route path="/terms">
+        <Layout><TermsOfService /></Layout>
+      </Route>
+
       {/* Protected Routes */}
       <Route path="/">
         <ProtectedLayout><Home /></ProtectedLayout>
@@ -49,6 +61,9 @@ function Router() {
       </Route>
       <Route path="/simulator">
         <ProtectedLayout><Simulator /></ProtectedLayout>
+      </Route>
+      <Route path="/colleges/:id">
+        <ProtectedLayout><CollegeDetail /></ProtectedLayout>
       </Route>
       <Route path="/colleges">
         <ProtectedLayout><Colleges /></ProtectedLayout>
