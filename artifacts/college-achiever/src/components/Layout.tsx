@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLogout } from "@workspace/api-client-react";
 import {
   Home, LineChart, Table2, ListChecks, Building2,
-  Info, LogOut, Loader2, GraduationCap, ShieldCheck,
+  Info, LogOut, Loader2, GraduationCap,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ const navItems = [
   { name: "Simulator", href: "/simulator", icon: ListChecks },
   { name: "Colleges", href: "/colleges", icon: Building2 },
   { name: "About", href: "/about", icon: Info },
-  { name: "Admin", href: "/admin/upload", icon: ShieldCheck },
 ];
 
 // Bottom nav shows 5 items; "More" maps to About

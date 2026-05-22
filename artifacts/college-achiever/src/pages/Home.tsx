@@ -5,6 +5,7 @@ import { Building2, BookOpen, GraduationCap, TrendingUp, ChevronRight, ArrowRigh
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import AdminGate from "@/components/AdminGate";
 
 const TICKER_ITEMS = [
   "Latest JOSAA Updates: Round-wise data updated for 2024 session",
@@ -259,6 +260,9 @@ export default function Home() {
           </Link>
         ))}
       </div>
+
+      {/* Hidden admin gate — triggered by typing "openadmin" on keyboard */}
+      <AdminGate />
     </div>
   );
 }
