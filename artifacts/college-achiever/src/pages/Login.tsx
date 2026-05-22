@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { useLogin, useSignup } from "@workspace/api-client-react";
-import { Loader2, ArrowRight, GraduationCap, Eye, EyeOff } from "lucide-react";
+import { Loader2, ArrowRight, GraduationCap, Eye, EyeOff, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+type Mode = "login" | "signup" | "forgot";
+
 export default function Login() {
-  const [isSignup, setIsSignup] = useState(false);
+  const [mode, setMode] = useState<Mode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const [, setLocation] = useLocation();
@@ -24,6 +26,17 @@ export default function Login() {
   const [signupRank, setSignupRank] = useState("");
   const [signupCategory, setSignupCategory] = useState("OPEN");
   const [signupErrors, setSignupErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+
+  // Forgot password fields
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotName, setForgotName] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirm, setForgotConfirm] = useState("");
+  const [forgotErrors, setForgotErrors] = useState<{
+    email?: string; name?: string; password?: string; confirm?: string;
+  }>({});
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const loginMutation = useLogin();
   const signupMutation = useSignup();
@@ -43,6 +56,16 @@ export default function Login() {
     if (!signupEmail || !/\S+@\S+\.\S+/.test(signupEmail)) errs.email = "Enter a valid email address.";
     if (!signupPassword || signupPassword.length < 6) errs.password = "Password must be at least 6 characters.";
     setSignupErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateForgot = () => {
+    const errs: typeof forgotErrors = {};
+    if (!forgotEmail || !/\S+@\S+\.\S+/.test(forgotEmail)) errs.email = "Enter a valid email address.";
+    if (!forgotName || forgotName.trim().length < 2) errs.name = "Enter the name you registered with.";
+    if (!forgotNewPassword || forgotNewPassword.length < 6) errs.password = "Password must be at least 6 characters.";
+    if (forgotConfirm !== forgotNewPassword) errs.confirm = "Passwords do not match.";
+    setForgotErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
@@ -97,11 +120,47 @@ export default function Login() {
     );
   };
 
-  // ── Toggle between Login / Signup ───────────────────────────────────────
-  const handleToggle = () => {
-    setIsSignup((prev) => !prev);
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForgot()) return;
+    setForgotLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail,
+          name: forgotName,
+          newPassword: forgotNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Reset failed",
+          description: data.error ?? "Could not reset your password. Please check your details.",
+        });
+      } else {
+        setForgotSuccess(true);
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Network error",
+        description: "Could not reach the server. Please try again.",
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
     setLoginErrors({});
     setSignupErrors({});
+    setForgotErrors({});
+    setForgotSuccess(false);
     setShowPassword(false);
   };
 
@@ -155,178 +214,317 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-md">
-          {/* Heading */}
-          <div className="mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              {isSignup ? "Create your account" : "Welcome back"}
-            </h2>
-            <p className="text-slate-500 mt-1 text-sm">
-              {isSignup
-                ? "Join thousands of JEE aspirants making smarter choices."
-                : "Sign in to access your personalised dashboard."}
-            </p>
-          </div>
 
-          {/* ── Login Form ── */}
-          {!isSignup && (
-            <form onSubmit={handleLoginSubmit} className="space-y-5" noValidate>
-              <Field label="Email Address" error={loginErrors.email}>
-                <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={fieldCls(!!loginErrors.email)}
-                  data-testid="input-login-email"
-                />
-              </Field>
-
-              <Field label="Password" error={loginErrors.password}>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    className={fieldCls(!!loginErrors.password) + " pr-11"}
-                    data-testid="input-login-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    tabIndex={-1}
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </Field>
-
-              <button
-                type="submit"
-                disabled={loginMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors mt-2"
-                data-testid="button-login-submit"
-              >
-                {loginMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>Sign In <ArrowRight className="h-4 w-4" /></>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* ── Signup Form ── */}
-          {isSignup && (
-            <form onSubmit={handleSignupSubmit} className="space-y-4" noValidate>
-              <Field label="Full Name" error={signupErrors.name}>
-                <input
-                  type="text"
-                  value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)}
-                  placeholder="Arjun Kumar"
-                  autoComplete="name"
-                  className={fieldCls(!!signupErrors.name)}
-                  data-testid="input-signup-name"
-                />
-              </Field>
-
-              <Field label="Email Address" error={signupErrors.email}>
-                <input
-                  type="email"
-                  value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
-                  placeholder="arjun@example.com"
-                  autoComplete="email"
-                  className={fieldCls(!!signupErrors.email)}
-                  data-testid="input-signup-email"
-                />
-              </Field>
-
-              <Field label="Password" error={signupErrors.password}>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="Min. 6 characters"
-                    autoComplete="new-password"
-                    className={fieldCls(!!signupErrors.password) + " pr-11"}
-                    data-testid="input-signup-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    tabIndex={-1}
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </Field>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="JEE Rank (Optional)">
-                  <input
-                    type="number"
-                    value={signupRank}
-                    onChange={(e) => setSignupRank(e.target.value)}
-                    placeholder="e.g. 5000"
-                    min={1}
-                    max={999999}
-                    className={fieldCls(false)}
-                    data-testid="input-signup-rank"
-                  />
-                </Field>
-
-                <Field label="Category">
-                  <select
-                    value={signupCategory}
-                    onChange={(e) => setSignupCategory(e.target.value)}
-                    className={fieldCls(false) + " bg-white"}
-                    data-testid="select-signup-category"
-                  >
-                    <option value="OPEN">OPEN</option>
-                    <option value="OBC-NCL">OBC-NCL</option>
-                    <option value="SC">SC</option>
-                    <option value="ST">ST</option>
-                    <option value="EWS">EWS</option>
-                  </select>
-                </Field>
+          {/* ══════════════ LOGIN ══════════════ */}
+          {mode === "login" && (
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Welcome back</h2>
+                <p className="text-slate-500 mt-1 text-sm">Sign in to access your personalised dashboard.</p>
               </div>
 
-              <button
-                type="submit"
-                disabled={signupMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors mt-2"
-                data-testid="button-signup-submit"
-              >
-                {signupMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>Create Account <ArrowRight className="h-4 w-4" /></>
-                )}
-              </button>
-            </form>
+              <form onSubmit={handleLoginSubmit} className="space-y-5" noValidate>
+                <Field label="Email Address" error={loginErrors.email}>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    className={fieldCls(!!loginErrors.email)}
+                    data-testid="input-login-email"
+                  />
+                </Field>
+
+                <Field label="Password" error={loginErrors.password}>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className={fieldCls(!!loginErrors.password) + " pr-11"}
+                      data-testid="input-login-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </Field>
+
+                <div className="flex justify-end -mt-2">
+                  <button
+                    type="button"
+                    onClick={() => switchMode("forgot")}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loginMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
+                  data-testid="button-login-submit"
+                >
+                  {loginMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>Sign In <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              </form>
+
+              <p className="text-sm text-slate-500 text-center mt-6">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                  data-testid="button-toggle-mode"
+                >
+                  Create one
+                </button>
+              </p>
+            </>
           )}
 
-          {/* ── Toggle ── */}
-          <p className="text-sm text-slate-500 text-center mt-6">
-            {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={handleToggle}
-              className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
-              data-testid="button-toggle-mode"
-            >
-              {isSignup ? "Sign in" : "Create one"}
-            </button>
-          </p>
+          {/* ══════════════ SIGNUP ══════════════ */}
+          {mode === "signup" && (
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Create your account</h2>
+                <p className="text-slate-500 mt-1 text-sm">
+                  Join thousands of JEE aspirants making smarter choices.
+                </p>
+              </div>
+
+              <form onSubmit={handleSignupSubmit} className="space-y-4" noValidate>
+                <Field label="Full Name" error={signupErrors.name}>
+                  <input
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="Arjun Kumar"
+                    autoComplete="name"
+                    className={fieldCls(!!signupErrors.name)}
+                    data-testid="input-signup-name"
+                  />
+                </Field>
+
+                <Field label="Email Address" error={signupErrors.email}>
+                  <input
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="arjun@example.com"
+                    autoComplete="email"
+                    className={fieldCls(!!signupErrors.email)}
+                    data-testid="input-signup-email"
+                  />
+                </Field>
+
+                <Field label="Password" error={signupErrors.password}>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="Min. 6 characters"
+                      autoComplete="new-password"
+                      className={fieldCls(!!signupErrors.password) + " pr-11"}
+                      data-testid="input-signup-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      tabIndex={-1}
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="JEE Rank (Optional)">
+                    <input
+                      type="number"
+                      value={signupRank}
+                      onChange={(e) => setSignupRank(e.target.value)}
+                      placeholder="e.g. 5000"
+                      min={1}
+                      max={999999}
+                      className={fieldCls(false)}
+                      data-testid="input-signup-rank"
+                    />
+                  </Field>
+
+                  <Field label="Category">
+                    <select
+                      value={signupCategory}
+                      onChange={(e) => setSignupCategory(e.target.value)}
+                      className={fieldCls(false) + " bg-white"}
+                      data-testid="select-signup-category"
+                    >
+                      <option value="OPEN">OPEN</option>
+                      <option value="OBC-NCL">OBC-NCL</option>
+                      <option value="SC">SC</option>
+                      <option value="ST">ST</option>
+                      <option value="EWS">EWS</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={signupMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors mt-2"
+                  data-testid="button-signup-submit"
+                >
+                  {signupMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>Create Account <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              </form>
+
+              <p className="text-sm text-slate-500 text-center mt-6">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                  data-testid="button-toggle-mode"
+                >
+                  Sign in
+                </button>
+              </p>
+            </>
+          )}
+
+          {/* ══════════════ FORGOT PASSWORD ══════════════ */}
+          {mode === "forgot" && (
+            <>
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 -ml-1 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to sign in
+              </button>
+
+              {forgotSuccess ? (
+                <div className="flex flex-col items-center text-center gap-4 py-6">
+                  <div className="bg-green-100 rounded-full p-4">
+                    <CheckCircle2 className="h-10 w-10 text-green-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Password reset!</h2>
+                    <p className="text-slate-500 mt-2 text-sm">
+                      Your password has been updated successfully.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => switchMode("login")}
+                    className="mt-2 w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors"
+                  >
+                    Sign in with new password <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-8">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Reset password</h2>
+                    <p className="text-slate-500 mt-1 text-sm">
+                      Enter your registered email and name to verify your identity, then set a new password.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleForgotSubmit} className="space-y-5" noValidate>
+                    <Field label="Registered Email" error={forgotErrors.email}>
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        className={fieldCls(!!forgotErrors.email)}
+                      />
+                    </Field>
+
+                    <Field label="Full Name (as registered)" error={forgotErrors.name}>
+                      <input
+                        type="text"
+                        value={forgotName}
+                        onChange={(e) => setForgotName(e.target.value)}
+                        placeholder="Arjun Kumar"
+                        autoComplete="name"
+                        className={fieldCls(!!forgotErrors.name)}
+                      />
+                    </Field>
+
+                    <Field label="New Password" error={forgotErrors.password}>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={forgotNewPassword}
+                          onChange={(e) => setForgotNewPassword(e.target.value)}
+                          placeholder="Min. 6 characters"
+                          autoComplete="new-password"
+                          className={fieldCls(!!forgotErrors.password) + " pr-11"}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          tabIndex={-1}
+                          aria-label="Toggle password visibility"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </Field>
+
+                    <Field label="Confirm New Password" error={forgotErrors.confirm}>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={forgotConfirm}
+                        onChange={(e) => setForgotConfirm(e.target.value)}
+                        placeholder="Re-enter new password"
+                        autoComplete="new-password"
+                        className={fieldCls(!!forgotErrors.confirm)}
+                      />
+                    </Field>
+
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
+                    >
+                      {forgotLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>Reset Password <ArrowRight className="h-4 w-4" /></>
+                      )}
+                    </button>
+                  </form>
+                </>
+              )}
+            </>
+          )}
+
         </div>
       </div>
     </div>

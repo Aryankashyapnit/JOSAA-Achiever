@@ -87,6 +87,27 @@ router.post("/auth/signup", async (req, res) => {
   return res.status(201).json({ user: safeUser, token });
 });
 
+router.post("/auth/reset-password", async (req, res) => {
+  const { email, name, newPassword } = req.body;
+  if (!email || !name || !newPassword) {
+    return res.status(400).json({ error: "Email, name, and new password are required" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
+  if (!user) {
+    return res.status(404).json({ error: "No account found with that email address" });
+  }
+  const nameMatches = user.name.trim().toLowerCase() === name.trim().toLowerCase();
+  if (!nameMatches) {
+    return res.status(401).json({ error: "Name does not match our records for this email" });
+  }
+  const passwordHash = hashPassword(newPassword);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+  return res.json({ message: "Password reset successfully" });
+});
+
 router.post("/auth/logout", (_req, res) => {
   return res.json({ message: "Logged out" });
 });
