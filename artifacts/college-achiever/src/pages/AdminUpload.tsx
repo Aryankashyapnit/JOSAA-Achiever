@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   Upload, CheckCircle2, XCircle, FileJson, Loader2,
   Table2, LineChart, ListChecks, Building2, Info, CalendarDays,
+  Database, Clock, RefreshCw,
 } from "lucide-react";
 
 interface UploadCard {
@@ -72,15 +73,24 @@ interface CardState {
   message: string;
 }
 
+interface DatasetStatus {
+  exists: boolean;
+  recordCount: number | null;
+  lastModified: string | null;
+}
+
+type StoreStatus = Record<string, DatasetStatus>;
+
 const INITIAL: CardState = { file: null, status: "idle", message: "" };
 
-const colorMap: Record<string, { bg: string; text: string; border: string; icon: string; badge: string }> = {
+const colorMap: Record<string, { bg: string; text: string; border: string; icon: string; badge: string; pill: string }> = {
   indigo: {
     bg: "bg-indigo-50 hover:bg-indigo-100",
     text: "text-indigo-700",
     border: "border-indigo-200",
     icon: "text-indigo-600",
     badge: "bg-indigo-600",
+    pill: "bg-indigo-50 text-indigo-600 border-indigo-200",
   },
   violet: {
     bg: "bg-violet-50 hover:bg-violet-100",
@@ -88,6 +98,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; icon:
     border: "border-violet-200",
     icon: "text-violet-600",
     badge: "bg-violet-600",
+    pill: "bg-violet-50 text-violet-600 border-violet-200",
   },
   sky: {
     bg: "bg-sky-50 hover:bg-sky-100",
@@ -95,6 +106,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; icon:
     border: "border-sky-200",
     icon: "text-sky-600",
     badge: "bg-sky-600",
+    pill: "bg-sky-50 text-sky-600 border-sky-200",
   },
   emerald: {
     bg: "bg-emerald-50 hover:bg-emerald-100",
@@ -102,6 +114,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; icon:
     border: "border-emerald-200",
     icon: "text-emerald-600",
     badge: "bg-emerald-600",
+    pill: "bg-emerald-50 text-emerald-600 border-emerald-200",
   },
   amber: {
     bg: "bg-amber-50 hover:bg-amber-100",
@@ -109,6 +122,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string; icon:
     border: "border-amber-200",
     icon: "text-amber-600",
     badge: "bg-amber-600",
+    pill: "bg-amber-50 text-amber-600 border-amber-200",
   },
   rose: {
     bg: "bg-rose-50 hover:bg-rose-100",
@@ -116,15 +130,44 @@ const colorMap: Record<string, { bg: string; text: string; border: string; icon:
     border: "border-rose-200",
     icon: "text-rose-600",
     badge: "bg-rose-600",
+    pill: "bg-rose-50 text-rose-600 border-rose-200",
   },
 };
+
+function timeAgo(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
 export default function AdminUpload() {
   const [states, setStates] = useState<Record<string, CardState>>(
     Object.fromEntries(CARDS.map((c) => [c.id, { ...INITIAL }])),
   );
+  const [storeStatus, setStoreStatus] = useState<StoreStatus>({});
+  const [statusLoading, setStatusLoading] = useState(true);
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/store-status");
+      if (res.ok) {
+        const data = await res.json();
+        setStoreStatus(data);
+      }
+    } catch {
+      /* silent — status is non-critical */
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
 
   const update = (id: string, patch: Partial<CardState>) =>
     setStates((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
@@ -158,6 +201,7 @@ export default function AdminUpload() {
           file: null,
         });
         if (inputRefs.current[card.id]) inputRefs.current[card.id]!.value = "";
+        fetchStatus();
       }
     } catch {
       update(card.id, { status: "error", message: "Network error — please try again." });
@@ -179,10 +223,21 @@ export default function AdminUpload() {
             Upload JSON files to persist data across server restarts.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 w-fit">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-          Admin access
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setStatusLoading(true); fetchStatus(); }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.97] transition-all cursor-pointer"
+            style={{ pointerEvents: "auto" }}
+          >
+            <RefreshCw className={`h-3 w-3 ${statusLoading ? "animate-spin" : ""}`} />
+            Refresh status
+          </button>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Admin access
+          </span>
+        </div>
       </div>
 
       {/* Grid */}
@@ -195,6 +250,7 @@ export default function AdminUpload() {
           const isSuccess = state.status === "success";
           const isError = state.status === "error";
           const hasFile = !!state.file;
+          const ds: DatasetStatus = storeStatus[card.id] ?? { exists: false, recordCount: null, lastModified: null };
 
           return (
             <div
@@ -203,14 +259,46 @@ export default function AdminUpload() {
               style={{ pointerEvents: "auto", zIndex: 1 }}
             >
               {/* Card top strip */}
-              <div className={`px-4 pt-4 pb-3 flex items-start gap-3`}>
+              <div className="px-4 pt-4 pb-3 flex items-start gap-3">
                 <div className={`rounded-xl p-2.5 ${c.bg} ${c.border} border flex-shrink-0`}>
                   <Icon className={`h-5 w-5 ${c.icon}`} />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-900 text-sm leading-tight">{card.label}</p>
                   <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{card.description}</p>
                 </div>
+              </div>
+
+              {/* Status bar */}
+              <div className={`mx-4 mb-3 rounded-xl border px-3 py-2 flex items-center gap-2 ${
+                ds.exists
+                  ? `${c.pill} border-current/20`
+                  : "bg-slate-50 border-slate-200"
+              }`}>
+                {statusLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-slate-400 flex-shrink-0" />
+                ) : ds.exists ? (
+                  <>
+                    <Database className="h-3 w-3 flex-shrink-0 opacity-70" />
+                    <span className="text-[11px] font-semibold">
+                      {ds.recordCount !== null
+                        ? `${ds.recordCount.toLocaleString("en-IN")} records`
+                        : "Data stored"}
+                    </span>
+                    {ds.lastModified && (
+                      <>
+                        <span className="opacity-30 text-[10px]">·</span>
+                        <Clock className="h-2.5 w-2.5 flex-shrink-0 opacity-60" />
+                        <span className="text-[10px] opacity-70 ml-[-2px]">{timeAgo(ds.lastModified)}</span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="h-2 w-2 rounded-full bg-slate-300 flex-shrink-0" />
+                    <span className="text-[11px] text-slate-400 font-medium">No data uploaded yet</span>
+                  </>
+                )}
               </div>
 
               <div className="px-4 pb-4 flex flex-col gap-3 flex-1">
