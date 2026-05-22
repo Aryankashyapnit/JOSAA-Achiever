@@ -5,8 +5,13 @@ import AdminUpload from "@/pages/AdminUpload";
 const TRIGGER_SEQUENCE = "openadmin";
 const ADMIN_PASSWORD = "admin123";
 
-export default function AdminGate() {
-  const [showModal, setShowModal] = useState(false);
+interface AdminGateProps {
+  defaultOpen?: boolean;
+  onDismiss?: () => void;
+}
+
+export default function AdminGate({ defaultOpen = false, onDismiss }: AdminGateProps) {
+  const [showModal, setShowModal] = useState(defaultOpen);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +22,7 @@ export default function AdminGate() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (defaultOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isAdminAuthenticated || showModal) return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
@@ -35,7 +41,7 @@ export default function AdminGate() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isAdminAuthenticated, showModal]);
+  }, [isAdminAuthenticated, showModal, defaultOpen]);
 
   useEffect(() => {
     if (showModal) {
@@ -63,6 +69,7 @@ export default function AdminGate() {
     setShowModal(false);
     setPassword("");
     setError("");
+    if (onDismiss) onDismiss();
   };
 
   if (isAdminAuthenticated) {
