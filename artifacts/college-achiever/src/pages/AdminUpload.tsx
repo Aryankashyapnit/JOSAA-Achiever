@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import {
   Upload, CheckCircle2, XCircle, FileJson, Loader2,
   Table2, LineChart, ListChecks, Building2, Info, CalendarDays,
-  Database, Clock, RefreshCw,
+  Database, Clock, RefreshCw, Download,
 } from "lucide-react";
 
 interface UploadCard {
@@ -394,6 +394,25 @@ export default function AdminUpload() {
                     )}
                     {isLoading ? "Uploading…" : "Upload"}
                   </button>
+
+                  {ds.exists && (
+                    <a
+                      href={`/api/admin/download/${card.id}`}
+                      download
+                      className="
+                        flex items-center justify-center px-3 py-2.5
+                        rounded-xl border border-slate-200 bg-white text-slate-500
+                        text-xs font-medium
+                        hover:bg-slate-50 hover:border-slate-300 hover:text-slate-700
+                        active:scale-[0.97] active:bg-slate-100
+                        cursor-pointer select-none transition-all
+                      "
+                      title={`Download ${card.label} JSON`}
+                      style={{ pointerEvents: "auto" }}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  )}
 
                   {(isSuccess || isError || hasFile) && (
                     <button

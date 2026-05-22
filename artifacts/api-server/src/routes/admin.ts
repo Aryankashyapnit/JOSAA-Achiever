@@ -23,6 +23,21 @@ function parseJsonBuffer(buffer: Buffer): unknown {
   }
 }
 
+router.get("/admin/download/:dataset", (req, res) => {
+  const { dataset } = req.params;
+  const filename = STORE_FILES[dataset as keyof typeof STORE_FILES];
+  if (!filename) {
+    return res.status(404).json({ error: "Unknown dataset." });
+  }
+  const filePath = path.join(DATA_STORE_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "No data uploaded yet for this dataset." });
+  }
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  return res.send(fs.readFileSync(filePath));
+});
+
 router.get("/admin/store-status", (req, res) => {
   const result: Record<string, { exists: boolean; recordCount: number | null; lastModified: string | null }> = {};
 
