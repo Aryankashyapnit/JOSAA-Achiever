@@ -1,10 +1,18 @@
 import { Router } from "express";
 import { db, counsellingRoundsTable, seatMatrixTable, cutoffsTable, collegesTable } from "@workspace/db";
 import { eq, and, type SQL } from "drizzle-orm";
+import { readStoreFile, storeFileExists, STORE_FILES } from "../lib/data-store";
 
 const router = Router();
 
 router.get("/counselling/rounds", async (_req, res) => {
+  if (storeFileExists(STORE_FILES.schedule)) {
+    const stored = readStoreFile(STORE_FILES.schedule);
+    if (stored !== null) {
+      return res.json(stored);
+    }
+  }
+
   const rounds = await db
     .select()
     .from(counsellingRoundsTable)
@@ -15,9 +23,10 @@ router.get("/counselling/rounds", async (_req, res) => {
 router.get("/counselling/seat-matrix", async (req, res) => {
   const { collegeId, category, year = "2024" } = req.query as Record<string, string>;
 
-  const conditions: SQL[] = [eq(seatMatrixTable.year, parseInt(year))];
+  const conditions: SQL[] = [];
   if (collegeId) conditions.push(eq(seatMatrixTable.collegeId, parseInt(collegeId)));
   if (category) conditions.push(eq(seatMatrixTable.category, category));
+  conditions.push(eq(seatMatrixTable.year, parseInt(year)));
 
   const rows = await db
     .select()
@@ -29,6 +38,13 @@ router.get("/counselling/seat-matrix", async (req, res) => {
 });
 
 router.post("/counselling/simulate", async (req, res) => {
+  if (storeFileExists(STORE_FILES.simulator)) {
+    const stored = readStoreFile(STORE_FILES.simulator);
+    if (stored !== null) {
+      return res.json(stored);
+    }
+  }
+
   const { rank, category, gender, year = 2024, preferences } = req.body;
 
   if (!rank || !category || !gender || !preferences || !Array.isArray(preferences)) {

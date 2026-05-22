@@ -6,6 +6,8 @@ import cutoffsRouter from "./cutoffs";
 import predictorRouter from "./predictor";
 import counsellingRouter from "./counselling";
 import dashboardRouter from "./dashboard";
+import adminRouter from "./admin";
+import aboutRouter from "./about";
 
 const router: IRouter = Router();
 
@@ -16,5 +18,7 @@ router.use(cutoffsRouter);
 router.use(predictorRouter);
 router.use(counsellingRouter);
 router.use(dashboardRouter);
+router.use(adminRouter);
+router.use(aboutRouter);
 
 export default router;

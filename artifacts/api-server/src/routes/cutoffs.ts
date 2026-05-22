@@ -1,10 +1,18 @@
 import { Router } from "express";
 import { db, cutoffsTable, collegesTable } from "@workspace/db";
 import { eq, and, type SQL, sql } from "drizzle-orm";
+import { readStoreFile, storeFileExists, STORE_FILES } from "../lib/data-store";
 
 const router = Router();
 
 router.get("/cutoffs", async (req, res) => {
+  if (storeFileExists(STORE_FILES.cutoffs)) {
+    const stored = readStoreFile(STORE_FILES.cutoffs);
+    if (stored !== null) {
+      return res.json(stored);
+    }
+  }
+
   const {
     collegeId,
     branch,

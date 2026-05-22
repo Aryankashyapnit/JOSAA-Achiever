@@ -1,10 +1,18 @@
 import { Router } from "express";
-import { db, collegesTable, cutoffsTable, seatMatrixTable } from "@workspace/db";
+import { db, collegesTable, cutoffsTable } from "@workspace/db";
 import { eq, like, and, type SQL, sql } from "drizzle-orm";
+import { readStoreFile, storeFileExists, STORE_FILES } from "../lib/data-store";
 
 const router = Router();
 
 router.get("/colleges", async (req, res) => {
+  if (storeFileExists(STORE_FILES.colleges)) {
+    const stored = readStoreFile(STORE_FILES.colleges);
+    if (stored !== null) {
+      return res.json(stored);
+    }
+  }
+
   const { state, type, search, page = "1", limit = "20" } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
@@ -30,6 +38,13 @@ router.get("/colleges", async (req, res) => {
 });
 
 router.get("/colleges/top", async (req, res) => {
+  if (storeFileExists(STORE_FILES.colleges)) {
+    const stored = readStoreFile<{ colleges?: unknown[] }>(STORE_FILES.colleges);
+    if (stored !== null && stored.colleges) {
+      return res.json(stored.colleges);
+    }
+  }
+
   const { type, limit = "10" } = req.query as Record<string, string>;
   const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
 

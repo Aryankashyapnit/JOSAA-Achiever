@@ -1,10 +1,18 @@
 import { Router } from "express";
 import { db, cutoffsTable, collegesTable } from "@workspace/db";
-import { eq, and, lte, type SQL } from "drizzle-orm";
+import { eq, and, type SQL } from "drizzle-orm";
+import { readStoreFile, storeFileExists, STORE_FILES } from "../lib/data-store";
 
 const router = Router();
 
 router.get("/predictor/results", async (req, res) => {
+  if (storeFileExists(STORE_FILES.predictor)) {
+    const stored = readStoreFile(STORE_FILES.predictor);
+    if (stored !== null) {
+      return res.json(stored);
+    }
+  }
+
   const { rank, category, gender, type, year = "2024" } = req.query as Record<string, string>;
 
   if (!rank || !category || !gender) {
