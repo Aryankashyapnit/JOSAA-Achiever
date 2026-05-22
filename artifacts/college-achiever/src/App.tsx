@@ -15,6 +15,7 @@ import Simulator from "@/pages/Simulator";
 import Colleges from "@/pages/Colleges";
 import CollegeDetail from "@/pages/CollegeDetail";
 import About from "@/pages/About";
+import AdminUpload from "@/pages/AdminUpload";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 
@@ -70,6 +71,9 @@ function Router() {
       </Route>
       <Route path="/about">
         <ProtectedLayout><About /></ProtectedLayout>
+      </Route>
+      <Route path="/admin/upload">
+        <ProtectedLayout><AdminUpload /></ProtectedLayout>
       </Route>
 
       <Route component={NotFound} />
