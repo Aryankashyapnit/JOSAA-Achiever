@@ -71,6 +71,7 @@ interface CardState {
   file: File | null;
   status: UploadState;
   message: string;
+  details: string[];
 }
 
 interface DatasetStatus {
@@ -81,7 +82,7 @@ interface DatasetStatus {
 
 type StoreStatus = Record<string, DatasetStatus>;
 
-const INITIAL: CardState = { file: null, status: "idle", message: "" };
+const INITIAL: CardState = { file: null, status: "idle", message: "", details: [] };
 
 const colorMap: Record<string, { bg: string; text: string; border: string; icon: string; badge: string; pill: string }> = {
   indigo: {
@@ -193,18 +194,20 @@ export default function AdminUpload() {
         update(card.id, {
           status: "error",
           message: data.error ?? `Upload failed (${res.status})`,
+          details: Array.isArray(data.details) ? data.details : [],
         });
       } else {
         update(card.id, {
           status: "success",
           message: data.message ?? "Uploaded and saved to disk.",
+          details: [],
           file: null,
         });
         if (inputRefs.current[card.id]) inputRefs.current[card.id]!.value = "";
         fetchStatus();
       }
     } catch {
-      update(card.id, { status: "error", message: "Network error — please try again." });
+      update(card.id, { status: "error", message: "Network error — please try again.", details: [] });
     }
   };
 
@@ -353,9 +356,18 @@ export default function AdminUpload() {
                   </div>
                 )}
                 {isError && (
-                  <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                    <XCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span>{state.message}</span>
+                  <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <XCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">{state.message}</span>
+                    </div>
+                    {state.details.length > 0 && (
+                      <ul className="pl-5 space-y-0.5 list-disc marker:text-red-400">
+                        {state.details.map((d, i) => (
+                          <li key={i} className="text-red-600 leading-relaxed">{d}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 

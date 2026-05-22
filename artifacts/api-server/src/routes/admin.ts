@@ -3,6 +3,14 @@ import path from "path";
 import { Router } from "express";
 import multer from "multer";
 import { writeStoreFile, readStoreFile, DATA_STORE_DIR, STORE_FILES } from "../lib/data-store";
+import {
+  validateCutoffs,
+  validatePredictor,
+  validateSimulator,
+  validateColleges,
+  validateAbout,
+  validateSchedule,
+} from "../lib/validators";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -45,76 +53,44 @@ router.get("/admin/store-status", (req, res) => {
   return res.json(result);
 });
 
-router.post("/admin/upload-cutoffs", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.cutoffs, data);
-  return res.json({ success: true, message: "Cutoffs data saved to disk" });
-});
+function handleUpload(
+  storeKey: keyof typeof STORE_FILES,
+  validator: (data: unknown) => { valid: boolean; errors: string[] },
+  successMsg: string,
+) {
+  return [
+    upload.single("file"),
+    (req: import("express").Request, res: import("express").Response) => {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded." });
+      }
+      const data = parseJsonBuffer(req.file.buffer);
+      if (data === null) {
+        return res.status(400).json({ error: "Invalid JSON — the file could not be parsed. Ensure it is valid JSON." });
+      }
+      const result = validator(data);
+      if (!result.valid) {
+        return res.status(422).json({
+          error: result.errors[0],
+          details: result.errors.slice(1),
+        });
+      }
+      writeStoreFile(STORE_FILES[storeKey], data);
+      const count = Array.isArray(data) ? data.length : null;
+      return res.json({
+        success: true,
+        message: successMsg,
+        recordCount: count,
+      });
+    },
+  ] as import("express").RequestHandler[];
+}
 
-router.post("/admin/upload-predictor", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.predictor, data);
-  return res.json({ success: true, message: "Predictor data saved to disk" });
-});
-
-router.post("/admin/upload-simulator", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.simulator, data);
-  return res.json({ success: true, message: "Simulator data saved to disk" });
-});
-
-router.post("/admin/upload-colleges", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.colleges, data);
-  return res.json({ success: true, message: "Colleges data saved to disk" });
-});
-
-router.post("/admin/upload-about", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.about, data);
-  return res.json({ success: true, message: "About data saved to disk" });
-});
-
-router.post("/admin/upload-schedule", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const data = parseJsonBuffer(req.file.buffer);
-  if (data === null) {
-    return res.status(400).json({ error: "Invalid JSON file" });
-  }
-  writeStoreFile(STORE_FILES.schedule, data);
-  return res.json({ success: true, message: "Schedule data saved to disk" });
-});
+router.post("/admin/upload-cutoffs",   ...handleUpload("cutoffs",   validateCutoffs,   "Cutoffs data validated and saved to disk."));
+router.post("/admin/upload-predictor", ...handleUpload("predictor", validatePredictor, "Predictor data validated and saved to disk."));
+router.post("/admin/upload-simulator", ...handleUpload("simulator", validateSimulator, "Simulator data validated and saved to disk."));
+router.post("/admin/upload-colleges",  ...handleUpload("colleges",  validateColleges,  "Colleges data validated and saved to disk."));
+router.post("/admin/upload-about",     ...handleUpload("about",     validateAbout,     "About data validated and saved to disk."));
+router.post("/admin/upload-schedule",  ...handleUpload("schedule",  validateSchedule,  "Schedule data validated and saved to disk."));
 
 export default router;
