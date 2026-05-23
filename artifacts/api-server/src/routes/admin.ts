@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Router } from "express";
 import multer from "multer";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, collegesTable, cutoffsTable } from "@workspace/db";
 import { writeStoreFile, readStoreFile, DATA_STORE_DIR, STORE_FILES } from "../lib/data-store";
 import { deriveCollegeInfo } from "../lib/college-utils";
@@ -25,6 +25,22 @@ function parseJsonBuffer(buffer: Buffer): unknown {
     return null;
   }
 }
+
+router.get("/admin/db-stats", async (_req, res) => {
+  try {
+    const [collegeCount, cutoffCount] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(collegesTable),
+      db.select({ count: sql<number>`count(*)` }).from(cutoffsTable),
+    ]);
+    return res.json({
+      colleges: Number(collegeCount[0]?.count ?? 0),
+      cutoffs: Number(cutoffCount[0]?.count ?? 0),
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return res.status(500).json({ error: `Failed to fetch DB stats: ${msg}` });
+  }
+});
 
 interface IngestRow {
   collegeName: string;

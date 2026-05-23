@@ -74,11 +74,7 @@ export default function AdminGate({ defaultOpen = false, onDismiss, contentOverr
   };
 
   if (isAdminAuthenticated) {
-    return (
-      <div className="mt-8 pt-8 border-t border-slate-200">
-        {contentOverride ?? <AdminUpload />}
-      </div>
-    );
+    return contentOverride ?? <AdminUpload />;
   }
 
   if (!showModal) return null;
