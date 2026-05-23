@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import AdminPage from "@/pages/AdminPage";
+import AdminCutoffsPage from "@/pages/AdminCutoffsPage";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Predictor from "@/pages/Predictor";
@@ -74,6 +75,9 @@ function Router() {
       </Route>
       <Route path="/admin/upload">
         <ProtectedLayout><AdminPage /></ProtectedLayout>
+      </Route>
+      <Route path="/admin/cutoffs-ingest">
+        <ProtectedLayout><AdminCutoffsPage /></ProtectedLayout>
       </Route>
 
       <Route component={NotFound} />

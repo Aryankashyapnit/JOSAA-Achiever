@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ShieldCheck, Eye, EyeOff, X, Lock } from "lucide-react";
 import AdminUpload from "@/pages/AdminUpload";
 
@@ -8,9 +8,10 @@ const ADMIN_PASSWORD = "admin123";
 interface AdminGateProps {
   defaultOpen?: boolean;
   onDismiss?: () => void;
+  contentOverride?: ReactNode;
 }
 
-export default function AdminGate({ defaultOpen = false, onDismiss }: AdminGateProps) {
+export default function AdminGate({ defaultOpen = false, onDismiss, contentOverride }: AdminGateProps) {
   const [showModal, setShowModal] = useState(defaultOpen);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -75,7 +76,7 @@ export default function AdminGate({ defaultOpen = false, onDismiss }: AdminGateP
   if (isAdminAuthenticated) {
     return (
       <div className="mt-8 pt-8 border-t border-slate-200">
-        <AdminUpload />
+        {contentOverride ?? <AdminUpload />}
       </div>
     );
   }

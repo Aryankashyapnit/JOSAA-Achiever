@@ -1,8 +1,9 @@
 import { useRef, useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import {
   Upload, CheckCircle2, XCircle, FileJson, Loader2,
   Table2, LineChart, ListChecks, Building2, Info, CalendarDays,
-  Database, Clock, RefreshCw, Download,
+  Database, Clock, RefreshCw, Download, Zap,
 } from "lucide-react";
 
 interface UploadCard {
@@ -144,6 +145,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function AdminUpload() {
+  const [, navigate] = useLocation();
   const [states, setStates] = useState<Record<string, CardState>>(
     Object.fromEntries(CARDS.map((c) => [c.id, { ...INITIAL }])),
   );
@@ -226,7 +228,16 @@ export default function AdminUpload() {
             Upload JSON files to persist data across server restarts.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => navigate("/admin/cutoffs-ingest")}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5 hover:bg-indigo-100 active:scale-[0.97] transition-all cursor-pointer"
+            style={{ pointerEvents: "auto" }}
+          >
+            <Zap className="h-3 w-3" />
+            Smart DB Ingest
+          </button>
           <button
             type="button"
             onClick={() => { setStatusLoading(true); fetchStatus(); }}
@@ -234,7 +245,7 @@ export default function AdminUpload() {
             style={{ pointerEvents: "auto" }}
           >
             <RefreshCw className={`h-3 w-3 ${statusLoading ? "animate-spin" : ""}`} />
-            Refresh status
+            Refresh
           </button>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />

@@ -2,7 +2,10 @@ import fs from "fs";
 import path from "path";
 import { Router } from "express";
 import multer from "multer";
+import { eq } from "drizzle-orm";
+import { db, collegesTable, cutoffsTable } from "@workspace/db";
 import { writeStoreFile, readStoreFile, DATA_STORE_DIR, STORE_FILES } from "../lib/data-store";
+import { deriveCollegeInfo } from "../lib/college-utils";
 import {
   validateCutoffs,
   validatePredictor,
@@ -22,6 +25,99 @@ function parseJsonBuffer(buffer: Buffer): unknown {
     return null;
   }
 }
+
+interface IngestRow {
+  collegeName: string;
+  branchName: string;
+  openingRank: number;
+  closingRank: number;
+  year: number;
+  round: number;
+  category: string;
+  gender: string;
+}
+
+router.post("/admin/ingest-cutoffs-batch", async (req, res) => {
+  const { rows } = req.body as { rows: IngestRow[] };
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: "rows must be a non-empty array." });
+  }
+
+  const collegeNameCache = new Map<string, number>();
+  const newColleges: string[] = [];
+  let inserted = 0;
+  let skipped = 0;
+
+  try {
+    for (const row of rows) {
+      const name = (row.collegeName ?? "").trim();
+      const branch = (row.branchName ?? "").trim();
+      const openingRank = Math.round(Number(row.openingRank));
+      const closingRank = Math.round(Number(row.closingRank));
+      const year = Math.round(Number(row.year ?? 2024));
+      const round = Math.round(Number(row.round ?? 1));
+      const category = (row.category ?? "OPEN").trim();
+      const gender = (row.gender ?? "Gender-Neutral").trim();
+
+      if (!name || !branch || isNaN(openingRank) || isNaN(closingRank)) {
+        skipped++;
+        continue;
+      }
+
+      let collegeId = collegeNameCache.get(name);
+
+      if (collegeId === undefined) {
+        const existing = await db
+          .select({ id: collegesTable.id })
+          .from(collegesTable)
+          .where(eq(collegesTable.name, name))
+          .limit(1);
+
+        if (existing.length > 0) {
+          collegeId = existing[0].id;
+        } else {
+          const info = deriveCollegeInfo(name);
+          const [inserted_college] = await db
+            .insert(collegesTable)
+            .values({
+              name,
+              shortName: info.shortName,
+              type: info.type,
+              city: info.city,
+              state: info.state,
+            })
+            .returning({ id: collegesTable.id });
+          collegeId = inserted_college.id;
+          newColleges.push(name);
+        }
+
+        collegeNameCache.set(name, collegeId);
+      }
+
+      try {
+        await db.insert(cutoffsTable).values({
+          collegeId,
+          branch,
+          category,
+          gender,
+          year,
+          round,
+          openingRank,
+          closingRank,
+        });
+        inserted++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    return res.json({ inserted, skipped, newColleges });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return res.status(500).json({ error: `Batch processing failed: ${msg}` });
+  }
+});
 
 router.get("/admin/download/:dataset", (req, res) => {
   const { dataset } = req.params;
