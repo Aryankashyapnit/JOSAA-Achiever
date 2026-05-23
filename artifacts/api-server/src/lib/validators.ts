@@ -46,10 +46,10 @@ export function validateCutoffs(data: unknown): ValidationResult {
 
   const arr = data as Record<string, unknown>[];
   const REQUIRED: string[][] = [
-    ["college", "institute", "instituteName", "collegeCode"],
-    ["branch", "program", "courseName", "programName"],
+    ["college", "institute", "instituteName", "collegeCode", "collegeName"],
+    ["branch", "program", "courseName", "programName", "branchName"],
     ["category", "quota"],
-    ["rank", "openingRank", "closingRank", "cutoffRank"],
+    ["rank", "openingRank", "closingRank", "cutoffRank", "openRank", "closeRank"],
   ];
 
   const errors: string[] = [];
@@ -63,8 +63,9 @@ export function validateCutoffs(data: unknown): ValidationResult {
   }
 
   if (errors.length > 0) {
+    const found = Object.keys(arr[0] ?? {}).join(", ");
     errors.unshift(
-      `Cutoffs validation failed. Expected fields: college/institute, branch/program, category/quota, rank/openingRank/closingRank.`,
+      `Cutoffs validation failed. Found keys: [${found}]. Expected: collegeName/college/institute, branchName/branch/program, category/quota, openingRank/closingRank/rank.`,
     );
     return { valid: false, errors };
   }
